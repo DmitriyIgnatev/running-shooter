@@ -4,13 +4,14 @@ import os
 import sys
 import random
 
+zombies = random.randint(4, 10)
+count_of_zom = zombies
 
-def change():
+def change(zombies):
     f1 = open('data/map.txt', mode='w', encoding='utf-8')
-    zombies = random.randint(4, 10)
     zombies_coords = [(random.randint(5, 14), random.randint(5, 20)) for i in range(zombies)]
     houses = [(random.randint(3, 11), random.randint(5, 15)) for i in range(1)]
-    stones = [(random.randint(5, 14), random.randint(5, 20)) for i in range(random.randint(3, 6))]
+    stones = [(random.randint(5, 14), random.randint(5, 20)) for i in range(random.randint(6, 15))]
     maps = []
     for i in range(14):
         a = ''
@@ -57,8 +58,9 @@ def change():
         f1.write(''.join(i))
 
 
-change()
+change(zombies)
 
+group = pygame.sprite.Group()
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -84,7 +86,7 @@ def generate_level(level):
                 all_sprites.add(player)
             elif level[y][x] == 'z':
                 Tile('grow', x, y, 1)
-                mon.add(Monsters(y, x))
+                mon.add(Monsters(y, x , count_of_zom))
             elif level[y][x] == 'h':
                 Tile('grow', x, y, 1)
                 ho = Block('house', x, y, 200)
@@ -95,15 +97,15 @@ def generate_level(level):
                 block_group.add(ho)
             elif level[y][x] == 's':
                 Tile('grow', x, y, 1)
-                st = Ston('stone_figure', x, y, 100)
-                block_group.add(st)
+                st = Ston('stone_figure', x, y, 100, random.randint(0, 1))
+                stones.add(st)
             elif level[y][x] == '$':
                 Tile('st', x, y, random.randint(0, 1))
     return player, x, y
 
 
 tile_images = {'grow': [load_image('brick1.jpg'), load_image('brick2.jpg')], 'house': load_image('house.png'),
-               'cfhfq': load_image('cfhfq.png'), 'stone_figure': load_image('stone_figure.png'),
+               'cfhfq': load_image('cfhfq.png'), 'stone_figure': [load_image('stom.png'), load_image('stone_figure.png')],
                'st': [load_image('stone1.jpg'), load_image('stone2.jpg')]}
 
 all_sprites = pygame.sprite.Group()
@@ -148,9 +150,9 @@ class Block(pygame.sprite.Sprite):
 
 
 class Ston(pygame.sprite.Sprite):
-    def __init__(self, name, x, y, size):
+    def __init__(self, name, x, y, size, a):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(tile_images[name], (size, size))
+        self.image = pygame.transform.scale(tile_images[name][a], (size, size))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect.x = x * 45
@@ -219,7 +221,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Monsters(pygame.sprite.Sprite):
-    def __init__(self, y, x):
+    def __init__(self, y, x, count_of_zom):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.transform.scale(pygame.image.load(f'data/zom1.png'), (size_monster, size_monster))
         self.rect = self.image.get_rect()
@@ -232,6 +234,8 @@ class Monsters(pygame.sprite.Sprite):
         self.anim_right = [
             pygame.transform.scale(pygame.image.load(f'data/zombie_dead{i}.png'), (size_monster, size_monster)) for i in
             range(1, 5)]
+
+        self.count_of_zom = count_of_zom
 
     def plus(self):
         s = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
@@ -260,7 +264,7 @@ class Monsters(pygame.sprite.Sprite):
             if self.index_animation == 3.0:
                 pass
             else:
-                self.index_animation += 0.1
+                self.index_animation += 0.09
         except:
             pass
 
@@ -376,6 +380,10 @@ if __name__ == '__main__':
                         pygame.mixer.init()
                         pygame.mixer.music.load("data/shoot.mp3")
                         pygame.mixer.music.play()
+        if len(mon.sprites()) == 0:
+            zombies = random.randint(4, 10)
+            count_of_zom = zombies
+            change(zombies)
 
         try:
             bul.x()
@@ -391,6 +399,7 @@ if __name__ == '__main__':
         tiles_group.draw(screen)
         all_sprites.draw(screen)
         mon.draw(screen)
+        group.draw(screen)
         bullet.draw(screen)
         stones.draw(screen)
         block_group.draw(screen)
@@ -405,6 +414,8 @@ if __name__ == '__main__':
         for sprite in bullet:
             camera.apply(sprite)
         for sprite in mon:
+            camera.apply(sprite)
+        for sprite in stones:
             camera.apply(sprite)
         pygame.display.flip()
         player.update()
