@@ -7,32 +7,16 @@ import random
 
 def change():
     f1 = open('data/map.txt', mode='w', encoding='utf-8')
-    flag = False
-    number_player = random.randint(5, 14)
-    number_player_more = random.randint(5, 20)
     zombies = random.randint(4, 10)
     zombies_coords = [(random.randint(5, 14), random.randint(5, 20)) for i in range(zombies)]
     houses = [(random.randint(3, 11), random.randint(5, 15)) for i in range(1)]
     stones = [(random.randint(5, 14), random.randint(5, 20)) for i in range(random.randint(3, 6))]
-    count = 0
     maps = []
-    count_more = 0
     for i in range(14):
         a = ''
-        if count != number_player:
-            for j in range(20):
-                g = random.choice(['#', '.'])
-                a += g
-        else:
-            for j in range(20):
-                if number_player_more == count_more:
-                    g = '@'
-                    a += g
-                else:
-                    g = random.choice(['#', '.'])
-                    a += g
-                count_more += 1
-        count += 1
+        for j in range(20):
+            g = random.choice(['#', '.'])
+            a += g
         maps.append(a + '\n')
     for i in zombies_coords:
         try:
@@ -66,6 +50,9 @@ def change():
                 maps[i[0]] = a
         except:
             continue
+    maps += '$$$\n'
+    maps += '$@$\n'
+    maps += '$$$\n'
     for i in maps:
         f1.write(''.join(i))
 
@@ -92,7 +79,7 @@ def generate_level(level):
             elif level[y][x] == '.':
                 Tile('grow', x, y, 1)
             elif level[y][x] == '@':
-                Tile('grow', x, y, 0)
+                Tile('st', x, y, random.randint(0, 1))
                 player = Player(y, x)
                 all_sprites.add(player)
             elif level[y][x] == 'z':
@@ -108,12 +95,16 @@ def generate_level(level):
                 block_group.add(ho)
             elif level[y][x] == 's':
                 Tile('grow', x, y, 1)
-                st = Block('stone_figure', x, y, 100)
+                st = Ston('stone_figure', x, y, 100)
                 block_group.add(st)
+            elif level[y][x] == '$':
+                Tile('st', x, y, random.randint(0, 1))
     return player, x, y
 
+
 tile_images = {'grow': [load_image('brick1.jpg'), load_image('brick2.jpg')], 'house': load_image('house.png'),
-               'cfhfq': load_image('cfhfq.png'), 'stone_figure': load_image('stone_figure.png')}
+               'cfhfq': load_image('cfhfq.png'), 'stone_figure': load_image('stone_figure.png'),
+               'st': [load_image('stone1.jpg'), load_image('stone2.jpg')]}
 
 all_sprites = pygame.sprite.Group()
 SIZE = 100
@@ -123,6 +114,27 @@ tiles_group = pygame.sprite.Group()
 bullet = pygame.sprite.Group()
 mon = pygame.sprite.Group()
 block_group = pygame.sprite.Group()
+health = pygame.sprite.Group()
+stones = pygame.sprite.Group()
+
+health1 = pygame.sprite.Sprite()
+health1.image = pygame.transform.scale(load_image('hear.png'), (50, 50))
+health1.rect = health1.image.get_rect()
+health1.rect.x = 0
+
+health2 = pygame.sprite.Sprite()
+health2.image = pygame.transform.scale(load_image('hear.png'), (50, 50))
+health2.rect = health2.image.get_rect()
+health2.rect.x = 50
+
+health3 = pygame.sprite.Sprite()
+health3.image = pygame.transform.scale(load_image('hear.png'), (50, 50))
+health3.rect = health3.image.get_rect()
+health3.rect.x = 100
+
+health.add(health1)
+health.add(health2)
+health.add(health3)
 
 
 class Block(pygame.sprite.Sprite):
@@ -133,6 +145,20 @@ class Block(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x * 45
         self.rect.y = y * 45
+
+
+class Ston(pygame.sprite.Sprite):
+    def __init__(self, name, x, y, size):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(tile_images[name], (size, size))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect.x = x * 45
+        self.rect.y = y * 45
+
+    def update(self):
+        if pygame.sprite.spritecollideany(self, block_group):
+            self.kill()
 
 
 class Camera:
@@ -216,16 +242,17 @@ class Monsters(pygame.sprite.Sprite):
     def update(self):
         if self.flag == True:
             self.kill()
-        else:
-            if pygame.sprite.spritecollideany(self, bullet):
-                self.health -= 1
-                if self.health == 0:
-                    self.plus()
-                    self.flag = True
-                    bul.kill()
-                else:
-                    self.plus()
-                    bul.kill()
+        elif pygame.sprite.spritecollideany(self, bullet):
+            self.health -= 1
+            if self.health == 0:
+                self.plus()
+                self.flag = True
+                bul.kill()
+            else:
+                self.plus()
+                bul.kill()
+        elif pygame.sprite.spritecollideany(self, all_sprites):
+            health1.kill()
 
     def kill(self):
         try:
@@ -335,6 +362,7 @@ if __name__ == '__main__':
     a.rect = a.image.get_rect()
     space_group.add(a)
     space_group.draw(screen)
+    stones.update()
 
     while running:
         space_group.draw(screen)
@@ -364,7 +392,9 @@ if __name__ == '__main__':
         all_sprites.draw(screen)
         mon.draw(screen)
         bullet.draw(screen)
+        stones.draw(screen)
         block_group.draw(screen)
+        health.draw(screen)
         camera.update(player)
         for sprite in all_sprites:
             camera.apply(sprite)
