@@ -1,11 +1,71 @@
 import pygame
+import pygame.locals
 import time
 import os
 import sys
 import random
+import pygame.constants
+
+''' Окно '''
+window = pygame.display.set_mode((400, 430))
+pygame.display.set_caption("Hello, pygame!!!")
+''' Холст '''
+screen = pygame.Surface((400, 400))
+''' Строка состояния '''
+info_string = pygame.Surface((400, 30))
+
+
+class Menu:
+    def __init__(self, punkts=[120, 140, u'Punkt', (250, 250, 30), (250, 30, 250)]):
+        self.punkts = punkts
+
+    def render(self, poverhnost, font, num):
+        for i in self.punkts:
+            if num == i[5]:
+                poverhnost.blit(font.render(i[2], 1, i[4]), (i[0], i[1]))
+            else:
+                poverhnost.blit(font.render(i[2], 1, i[3]), (i[0], i[1]))
+
+    def menu(self):
+        flag = True
+        font_menu = pygame.font.Font('fonts/Pun.otf', 50)
+        pygame.key.set_repeat(0, 0)
+        pygame.mouse.set_visible(True)
+        punkt = 0
+        while flag:
+            info_string.fill((0, 100, 200))
+            screen.fill((0, 100, 200))
+
+            mp = pygame.mouse.get_pos()
+            for i in self.punkts:
+                if mp[0] > i[0] and mp[0] < i[0] + 155 and mp[1] > i[1] and mp[1] > i[1] + 50:
+                    punkt = i[5]
+            self.render(screen, font_menu, punkt)
+
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT:
+                    sys.exit()
+                if e.type == pygame.KEYDOWN:
+                    if e.key == pygame.K_ESCAPE:
+                        sys.exit()
+                    if e.key == pygame.K_UP:
+                        if punkt > 0:
+                            punkt -= 1
+                    if e.key == pygame.K_DOWN:
+                        if punkt < len(self.punkts) - 1:
+                            punkt += 1
+                if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                    if punkt == 0:
+                        flag = False
+                    elif punkt == 1:
+                        sys.exit()
+            window.blit(screen, (0, 30))
+            pygame.display.flip()
+
 
 zombies = random.randint(4, 10)
 count_of_zom = zombies
+
 
 def change(zombies):
     f1 = open('data/map.txt', mode='w', encoding='utf-8')
@@ -62,6 +122,7 @@ change(zombies)
 
 group = pygame.sprite.Group()
 
+
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     # если файл не существует, то выходим
@@ -86,7 +147,7 @@ def generate_level(level):
                 all_sprites.add(player)
             elif level[y][x] == 'z':
                 Tile('grow', x, y, 1)
-                mon.add(Monsters(y, x , count_of_zom))
+                mon.add(Monsters(y, x, count_of_zom))
             elif level[y][x] == 'h':
                 Tile('grow', x, y, 1)
                 ho = Block('house', x, y, 200)
@@ -105,7 +166,8 @@ def generate_level(level):
 
 
 tile_images = {'grow': [load_image('brick1.jpg'), load_image('brick2.jpg')], 'house': load_image('house.png'),
-               'cfhfq': load_image('cfhfq.png'), 'stone_figure': [load_image('stom.png'), load_image('stone_figure.png')],
+               'cfhfq': load_image('cfhfq.png'),
+               'stone_figure': [load_image('stom.png'), load_image('stone_figure.png')],
                'st': [load_image('stone1.jpg'), load_image('stone2.jpg')]}
 
 all_sprites = pygame.sprite.Group()
@@ -220,55 +282,6 @@ class Bullet(pygame.sprite.Sprite):
             return True
 
 
-class Monsters(pygame.sprite.Sprite):
-    def __init__(self, y, x, count_of_zom):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(pygame.image.load(f'data/zom1.png'), (size_monster, size_monster))
-        self.rect = self.image.get_rect()
-        self.rect.x = x * 50
-        self.rect.y = y * 50
-        self.mask = pygame.mask.from_surface(self.image)
-        self.health = 3
-        self.index_animation = 1
-        self.flag = False
-        self.anim_right = [
-            pygame.transform.scale(pygame.image.load(f'data/zombie_dead{i}.png'), (size_monster, size_monster)) for i in
-            range(1, 5)]
-
-        self.count_of_zom = count_of_zom
-
-    def plus(self):
-        s = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
-        s += 100
-        wr = open('data/result.txt', mode='w', encoding='utf-8')
-        wr.write(str(s))
-
-    def update(self):
-        if self.flag == True:
-            self.kill()
-        elif pygame.sprite.spritecollideany(self, bullet):
-            self.health -= 1
-            if self.health == 0:
-                self.plus()
-                self.flag = True
-                bul.kill()
-            else:
-                self.plus()
-                bul.kill()
-        elif pygame.sprite.spritecollideany(self, all_sprites):
-            health1.kill()
-
-    def kill(self):
-        try:
-            self.image = self.anim_right[int(self.index_animation)]
-            if self.index_animation == 3.0:
-                pass
-            else:
-                self.index_animation += 0.09
-        except:
-            pass
-
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, y, x):
         super().__init__(all_sprites)
@@ -288,19 +301,22 @@ class Player(pygame.sprite.Sprite):
     def get(self):
         return self.rect.x, self.rect.y, self.direction
 
+    def xy(self):
+        return self.rect.x, self.rect.y
+
     def update(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RIGHT]:
-            self.dx = 1
+            self.dx = 2
             self.direction = 0
         elif keys[pygame.K_LEFT]:
-            self.dx = -1
+            self.dx = -2
             self.direction = 2
         elif keys[pygame.K_UP]:
-            self.dy = -1
+            self.dy = -2
             self.direction = 3
         elif keys[pygame.K_DOWN]:
-            self.dy = 1
+            self.dy = 2
             self.direction = 1
         else:
             self.dx = 0
@@ -312,6 +328,106 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += self.dy
         # self.collider_y()
         # self.golds_up()
+
+    def animation(self, dx, dy):
+        try:
+            if dx == 2:
+                self.image = self.anim_right[int(self.index_animation)]
+                if self.index_animation == 3:
+                    self.index_animation = 1
+                self.index_animation += 0.1
+            elif dx == -2:
+                self.image = pygame.transform.flip(self.anim_right[int(self.index_animation)], True, False)
+                if self.index_animation == 3:
+                    self.index_animation = 1
+                self.index_animation += 0.1
+            elif dy == 2:
+                self.image = pygame.transform.rotate(self.anim_right[int(self.index_animation)], -90)
+                if self.index_animation == 3:
+                    self.index_animation = 1
+                self.index_animation += 0.1
+            elif dy == -2:
+                self.image = pygame.transform.rotate(self.anim_right[int(self.index_animation)], 90)
+                if self.index_animation == 3:
+                    self.index_animation = 1
+                self.index_animation += 0.1
+        except:
+            self.index_animation = 1
+
+
+class Monsters(pygame.sprite.Sprite):
+    def __init__(self, y, x, count_of_zom):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(pygame.image.load(f'data/zom1.png'), (size_monster, size_monster))
+        self.rect = self.image.get_rect()
+        self.rect.x = x * 50
+        self.rect.y = y * 50
+        self.mask = pygame.mask.from_surface(self.image)
+        self.health = 3
+        self.index_animation = 1
+        self.flag = False
+        self.anim_right = [
+            pygame.transform.scale(pygame.image.load(f'data/zombie_dead{i}.png'), (size_monster, size_monster)) for i in
+            range(1, 5)]
+        self.dx = 0
+        self.dy = 0
+        self.speed_x = 0.1
+        self.speed_y = 1
+        self.index_animation = 1
+        self.direction = 0
+        self.count_of_zom = count_of_zom
+        self.alive = True
+
+    def plus(self):
+        s = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+        s += 100
+        wr = open('data/result.txt', mode='w', encoding='utf-8')
+        wr.write(str(s))
+
+    def get(self):
+        return self.rect.x, self.rect.y, self.direction
+
+    def update(self, obj):
+        px, py = obj.xy()
+        if self.rect.x != px:
+            if self.rect.x > px:
+                self.dx = -1
+                self.direction = 2
+            else:
+                self.dx = 1
+                self.direction = 0
+        if self.rect.y != py:
+            if self.rect.y < py:
+                self.dy = 1
+                self.direction = 1
+            else:
+                self.dy = -1
+                self.direction = 3
+        if (self.rect.y == py and self.rect.x == px) or self.alive == False:
+            self.dx = 0
+            self.dy = 0
+
+        self.animation(self.dx, self.dy)
+        self.rect.x += self.dx
+        # self.collider_x()
+        self.rect.y += self.dy
+
+        # self.collider_y()
+        # self.golds_up()
+        if self.flag == True:
+            self.kill()
+        elif pygame.sprite.spritecollideany(self, bullet):
+            self.health -= 1
+            if self.health == 0:
+                self.plus()
+                self.flag = True
+                bul.kill()
+            else:
+                self.plus()
+                bul.kill()
+        elif pygame.sprite.spritecollideany(self, all_sprites):
+            if health.sprites():
+                health.remove(health.sprites()[0])
 
     def animation(self, dx, dy):
         try:
@@ -338,6 +454,17 @@ class Player(pygame.sprite.Sprite):
         except:
             self.index_animation = 1
 
+    def kill(self):
+        try:
+            self.alive = False
+            self.image = self.anim_right[int(self.index_animation)]
+            if self.index_animation == 3.0:
+                pass
+            else:
+                self.index_animation += 0.09
+        except:
+            pass
+
 
 def load_level(filename):
     filename = "data/" + filename
@@ -350,13 +477,19 @@ def load_level(filename):
 
 if __name__ == '__main__':
     pygame.init()
+    """ Создание меню """
+    punkts = [(120, 140, u'Play', (250, 250, 30), (250, 30, 250), 0),
+              (120, 210, u'Quit', (250, 250, 30), (250, 30, 250), 1)]
+    game = Menu(punkts)
+    game.menu()
+    """ Подготовка к запуску игры """
     size = width, height = 1000, 700
     screen = pygame.display.set_mode(size)
     running = True
     camera = Camera()
     screen.fill((93, 62, 29))
     pygame.display.flip()
-    fps = 120
+    fps = 240
     clock = pygame.time.Clock()
     player, level_x, level_y = generate_level(load_level('map.txt'))
     tiles_group.draw(screen)
@@ -395,7 +528,7 @@ if __name__ == '__main__':
                 bul.kill()
         except:
             pass
-        mon.update()
+        mon.update(player)
         tiles_group.draw(screen)
         all_sprites.draw(screen)
         mon.draw(screen)
