@@ -162,7 +162,7 @@ def generate_level(level):
                 stones.add(st)
             elif level[y][x] == '$':
                 Tile('st', x, y, random.randint(0, 1))
-    return player, x, y
+    return player, x, y, ho
 
 
 tile_images = {'grow': [load_image('brick1.jpg'), load_image('brick2.jpg')], 'house': load_image('house.png'),
@@ -289,6 +289,7 @@ class Player(pygame.sprite.Sprite):
                            range(1, 5)]
         self.image = pygame.transform.scale(pygame.image.load(f'data/r1.png'), (SIZE, SIZE))
         self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = x * 49
         self.rect.y = y * 49
         self.dx = 0
@@ -305,6 +306,14 @@ class Player(pygame.sprite.Sprite):
         return self.rect.x, self.rect.y
 
     def update(self):
+        if pygame.sprite.collide_mask(self, house) and self.direction == 0:
+            self.rect = self.rect.move(-2, 0)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 1:
+            self.rect = self.rect.move(0, -2)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 2:
+            self.rect = self.rect.move(2, 0)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 3:
+            self.rect = self.rect.move(0, 2)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RIGHT]:
             self.dx = 2
@@ -367,16 +376,20 @@ class Monsters(pygame.sprite.Sprite):
         self.index_animation = 1
         self.flag = False
         self.anim_right = [
+            pygame.transform.scale(pygame.image.load(f'data/zom{i}.png'), (size_monster, size_monster)) for i in
+            range(1, 5)]
+        self.dead = [
             pygame.transform.scale(pygame.image.load(f'data/zombie_dead{i}.png'), (size_monster, size_monster)) for i in
             range(1, 5)]
         self.dx = 0
         self.dy = 0
         self.speed_x = 0.1
-        self.speed_y = 1
+        self.speed_y = 0.1
         self.index_animation = 1
         self.direction = 0
         self.count_of_zom = count_of_zom
         self.alive = True
+        self.a = 0
 
     def plus(self):
         s = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
@@ -388,16 +401,30 @@ class Monsters(pygame.sprite.Sprite):
         return self.rect.x, self.rect.y, self.direction
 
     def update(self, obj):
+        if pygame.sprite.collide_mask(self, house) and self.direction == 2:
+            self.rect = self.rect.move(0, 2)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 0:
+            self.rect = self.rect.move(0, 2)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 1:
+            self.rect = self.rect.move(2, 0)
+        if pygame.sprite.collide_mask(self, house) and self.direction == 3:
+            self.rect = self.rect.move(-2, 0)
         px, py = obj.xy()
         if self.rect.x != px:
-            if self.rect.x > px:
+            if self.rect.x >= px:
                 self.dx = -1
                 self.direction = 2
             else:
                 self.dx = 1
                 self.direction = 0
         if self.rect.y != py:
-            if self.rect.y < py:
+            if self.rect.y + 1 >= py and self.rect.y - 1 <= py and self.dx == 1:
+                self.direction = 0
+                self.dy = 0
+            elif self.rect.y + 1 >= py and self.rect.y - 1 <= py and self.dx == -1:
+                self.direction = 2
+                self.dy = 0
+            elif self.rect.y <= py:
                 self.dy = 1
                 self.direction = 1
             else:
@@ -407,13 +434,11 @@ class Monsters(pygame.sprite.Sprite):
             self.dx = 0
             self.dy = 0
 
-        self.animation(self.dx, self.dy)
-        self.rect.x += self.dx
-        # self.collider_x()
-        self.rect.y += self.dy
-
-        # self.collider_y()
-        # self.golds_up()
+        self.animation(self.direction)
+        if self.dy == 0:
+            self.direction = 0
+        self.rect.x += int(self.dx)
+        self.rect.y += int(self.dy)
         if self.flag == True:
             self.kill()
         elif pygame.sprite.spritecollideany(self, bullet):
@@ -429,39 +454,39 @@ class Monsters(pygame.sprite.Sprite):
             if health.sprites():
                 health.remove(health.sprites()[0])
 
-    def animation(self, dx, dy):
+    def animation(self, direction):
         try:
-            if dx == 1:
+            if direction == 0:
                 self.image = self.anim_right[int(self.index_animation)]
                 if self.index_animation == 3:
                     self.index_animation = 1
-                self.index_animation += 0.1
-            elif dx == -1:
+                self.index_animation += 0.05
+            elif direction == 2:
                 self.image = pygame.transform.flip(self.anim_right[int(self.index_animation)], True, False)
                 if self.index_animation == 3:
                     self.index_animation = 1
-                self.index_animation += 0.1
-            elif dy == 1:
+                self.index_animation += 0.05
+            elif direction == 1:
                 self.image = pygame.transform.rotate(self.anim_right[int(self.index_animation)], -90)
                 if self.index_animation == 3:
                     self.index_animation = 1
-                self.index_animation += 0.1
-            elif dy == -1:
+                self.index_animation += 0.05
+            elif direction == 3:
                 self.image = pygame.transform.rotate(self.anim_right[int(self.index_animation)], 90)
                 if self.index_animation == 3:
                     self.index_animation = 1
-                self.index_animation += 0.1
+                self.index_animation += 0.05
         except:
             self.index_animation = 1
 
     def kill(self):
         try:
             self.alive = False
-            self.image = self.anim_right[int(self.index_animation)]
-            if self.index_animation == 3.0:
+            self.image = self.dead[int(self.a)]
+            if int(self.a) >= 3:
                 pass
             else:
-                self.index_animation += 0.09
+                self.a += 0.05
         except:
             pass
 
@@ -481,7 +506,7 @@ if __name__ == '__main__':
     punkts = [(120, 140, u'Play', (250, 250, 30), (250, 30, 250), 0),
               (120, 210, u'Quit', (250, 250, 30), (250, 30, 250), 1)]
     game = Menu(punkts)
-    game.menu()
+    # game.menu()
     """ Подготовка к запуску игры """
     size = width, height = 1000, 700
     screen = pygame.display.set_mode(size)
@@ -489,9 +514,9 @@ if __name__ == '__main__':
     camera = Camera()
     screen.fill((93, 62, 29))
     pygame.display.flip()
-    fps = 240
+    fps = 80
     clock = pygame.time.Clock()
-    player, level_x, level_y = generate_level(load_level('map.txt'))
+    player, level_x, level_y, house = generate_level(load_level('map.txt'))
     tiles_group.draw(screen)
     space_group = pygame.sprite.Group()
     a = pygame.sprite.Sprite()
