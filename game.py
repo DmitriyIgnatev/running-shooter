@@ -298,6 +298,11 @@ class Player(pygame.sprite.Sprite):
         self.speed_y = 1
         self.index_animation = 1
         self.direction = 0
+        self.a = 0
+        self.dead = [
+            pygame.transform.scale(pygame.image.load(f'data/{i}.png'), (size_monster, size_monster)) for i in
+            range(1, 5)]
+        self.life = True
 
     def get(self):
         return self.rect.x, self.rect.y, self.direction
@@ -306,6 +311,9 @@ class Player(pygame.sprite.Sprite):
         return self.rect.x, self.rect.y
 
     def update(self):
+        if not pygame.sprite.spritecollideany(self, tiles_group):
+            self.kill()
+            return 0
         if pygame.sprite.collide_mask(self, house) and self.direction == 0:
             self.rect = self.rect.move(-2, 0)
         if pygame.sprite.collide_mask(self, house) and self.direction == 1:
@@ -362,6 +370,17 @@ class Player(pygame.sprite.Sprite):
                 self.index_animation += 0.1
         except:
             self.index_animation = 1
+
+    def kill(self):
+        try:
+            self.life = False
+            self.image = self.dead[int(self.a)]
+            if int(self.a) >= 3:
+                pass
+            else:
+                self.a += 0.05
+        except:
+            pass
 
 
 class Monsters(pygame.sprite.Sprite):
