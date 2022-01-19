@@ -121,6 +121,7 @@ def change(zombies):
 change(zombies)
 
 group = pygame.sprite.Group()
+lake_group = pygame.sprite.Group()
 
 
 def load_image(name, colorkey=None):
@@ -199,6 +200,8 @@ health3.rect.x = 100
 health.add(health1)
 health.add(health2)
 health.add(health3)
+
+hh = True
 
 
 class Block(pygame.sprite.Sprite):
@@ -282,6 +285,9 @@ class Bullet(pygame.sprite.Sprite):
             return True
 
 
+monsters_dead = pygame.sprite.Group()
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, y, x):
         super().__init__(all_sprites)
@@ -298,6 +304,9 @@ class Player(pygame.sprite.Sprite):
         self.speed_y = 1
         self.index_animation = 1
         self.direction = 0
+        self.number_1 = True
+        self.number_2 = True
+        self.number_3 = True
         self.a = 0
         self.dead = [
             pygame.transform.scale(pygame.image.load(f'data/{i}.png'), (size_monster, size_monster)) for i in
@@ -310,10 +319,20 @@ class Player(pygame.sprite.Sprite):
     def xy(self):
         return self.rect.x, self.rect.y
 
+    def mon_heal(self):
+        if pygame.sprite.spritecollideany(self, mon):
+            self.heal()
+            return 160
+        return 0
+
     def update(self):
+        if not self.life:
+            self.kill()
+            return 0
         if not pygame.sprite.spritecollideany(self, tiles_group):
             self.kill()
             return 0
+
         if pygame.sprite.collide_mask(self, house) and self.direction == 0:
             self.rect = self.rect.move(-2, 0)
         if pygame.sprite.collide_mask(self, house) and self.direction == 1:
@@ -371,8 +390,23 @@ class Player(pygame.sprite.Sprite):
         except:
             self.index_animation = 1
 
+    def heal(self):
+        if self.number_1 == True and self.number_2 == True and self.number_3 == True:
+            self.number_1 = False
+            health3.kill()
+        elif self.number_1 == False and self.number_2 == True and self.number_3 == True:
+            self.number_2 = False
+            health2.kill()
+        elif self.number_1 == False and self.number_2 == False and self.number_3 == True:
+            self.number_3 = False
+            health1.kill()
+            self.kill()
+
     def kill(self):
         try:
+            health1.kill()
+            health2.kill()
+            health3.kill()
             self.life = False
             self.image = self.dead[int(self.a)]
             if int(self.a) >= 3:
@@ -469,9 +503,6 @@ class Monsters(pygame.sprite.Sprite):
             else:
                 self.plus()
                 bul.kill()
-        elif pygame.sprite.spritecollideany(self, all_sprites):
-            if health.sprites():
-                health.remove(health.sprites()[0])
 
     def animation(self, direction):
         try:
@@ -499,6 +530,7 @@ class Monsters(pygame.sprite.Sprite):
             self.index_animation = 1
 
     def kill(self):
+        global hh
         try:
             self.alive = False
             self.image = self.dead[int(self.a)]
@@ -534,6 +566,7 @@ if __name__ == '__main__':
     screen.fill((93, 62, 29))
     pygame.display.flip()
     fps = 80
+    fps_heal = 0
     clock = pygame.time.Clock()
     player, level_x, level_y, house = generate_level(load_level('map.txt'))
     tiles_group.draw(screen)
@@ -573,9 +606,16 @@ if __name__ == '__main__':
         except:
             pass
         mon.update(player)
+
+        if fps_heal != 0:
+            fps_heal -= 1
+        if fps_heal == 0:
+            fps_heal = player.mon_heal()
         tiles_group.draw(screen)
         all_sprites.draw(screen)
+
         mon.draw(screen)
+
         group.draw(screen)
         bullet.draw(screen)
         stones.draw(screen)
@@ -594,6 +634,8 @@ if __name__ == '__main__':
             camera.apply(sprite)
         for sprite in stones:
             camera.apply(sprite)
+        if fps_heal <= 160 and fps_heal >= 150:
+            screen.fill('red')
         pygame.display.flip()
         player.update()
         clock.tick(fps)
