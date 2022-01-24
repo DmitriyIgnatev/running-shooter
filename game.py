@@ -6,6 +6,7 @@ import sys
 import random
 import pygame.constants
 
+
 ''' Окно '''
 window = pygame.display.set_mode((400, 430))
 pygame.display.set_caption("Hello, pygame!!!")
@@ -13,10 +14,11 @@ pygame.display.set_caption("Hello, pygame!!!")
 screen = pygame.Surface((400, 400))
 ''' Строка состояния '''
 info_string = pygame.Surface((400, 30))
+width, height = 1000, 700
 
 
 class Menu:
-    def __init__(self, punkts=[120, 140, u'Punkt', (250, 250, 30), (250, 30, 250)]):
+    def __init__(self, punkts):
         self.punkts = punkts
 
     def render(self, poverhnost, font, num):
@@ -59,6 +61,7 @@ class Menu:
                         flag = False
                     elif punkt == 1:
                         sys.exit()
+            window.blit(info_string, (0, 0))
             window.blit(screen, (0, 30))
             pygame.display.flip()
 
@@ -151,19 +154,19 @@ def generate_level(level):
                 mon.add(Monsters(y, x, count_of_zom))
             elif level[y][x] == 'h':
                 Tile('grow', x, y, 1)
-                ho = Block('house', x, y, 200)
-                block_group.add(ho)
+                house = Block('house', x, y, 200)
+                block_group.add(house)
             elif level[y][x] == 'c':
                 Tile('grow', x, y, 1)
-                ho = Block('cfhfq', x, y, 300)
-                block_group.add(ho)
+                house = Block('cfhfq', x, y, 300)
+                block_group.add(house)
             elif level[y][x] == 's':
                 Tile('grow', x, y, 1)
                 st = Ston('stone_figure', x, y, 100, random.randint(0, 1))
                 stones.add(st)
             elif level[y][x] == '$':
                 Tile('st', x, y, random.randint(0, 1))
-    return player, x, y, ho
+    return player, x, y, house
 
 
 tile_images = {'grow': [load_image('brick1.jpg'), load_image('brick2.jpg')], 'house': load_image('house.png'),
@@ -179,8 +182,8 @@ tiles_group = pygame.sprite.Group()
 bullet = pygame.sprite.Group()
 mon = pygame.sprite.Group()
 block_group = pygame.sprite.Group()
-health = pygame.sprite.Group()
 stones = pygame.sprite.Group()
+health = pygame.sprite.Group()
 
 health1 = pygame.sprite.Sprite()
 health1.image = pygame.transform.scale(load_image('hear.png'), (50, 50))
@@ -196,12 +199,6 @@ health3 = pygame.sprite.Sprite()
 health3.image = pygame.transform.scale(load_image('hear.png'), (50, 50))
 health3.rect = health3.image.get_rect()
 health3.rect.x = 100
-
-health.add(health1)
-health.add(health2)
-health.add(health3)
-
-hh = True
 
 
 class Block(pygame.sprite.Sprite):
@@ -281,7 +278,7 @@ class Bullet(pygame.sprite.Sprite):
             self.rect = self.rect.move(0, -20)
 
     def dellete(self):
-        if self.rect.x >= 1000 or self.rect.x <= 0 or self.rect.y >= 700 or self.rect.y <= 0:
+        if self.rect.x >= 700 or self.rect.x <= 0 or self.rect.y >= 700 or self.rect.y <= 0:
             return True
 
 
@@ -325,7 +322,7 @@ class Player(pygame.sprite.Sprite):
             return 160
         return 0
 
-    def update(self):
+    def update(self, house):
         if not self.life:
             self.kill()
             return 0
@@ -335,12 +332,13 @@ class Player(pygame.sprite.Sprite):
 
         if pygame.sprite.collide_mask(self, house) and self.direction == 0:
             self.rect = self.rect.move(-2, 0)
-        if pygame.sprite.collide_mask(self, house) and self.direction == 1:
+        elif pygame.sprite.collide_mask(self, house) and self.direction == 1:
             self.rect = self.rect.move(0, -2)
-        if pygame.sprite.collide_mask(self, house) and self.direction == 2:
+        elif pygame.sprite.collide_mask(self, house) and self.direction == 2:
             self.rect = self.rect.move(2, 0)
-        if pygame.sprite.collide_mask(self, house) and self.direction == 3:
+        elif pygame.sprite.collide_mask(self, house) and self.direction == 3:
             self.rect = self.rect.move(0, 2)
+
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RIGHT]:
             self.dx = 2
@@ -416,6 +414,10 @@ class Player(pygame.sprite.Sprite):
         except:
             pass
 
+    def finish(self):
+        if not self.life:
+            return True
+
 
 class Monsters(pygame.sprite.Sprite):
     def __init__(self, y, x, count_of_zom):
@@ -446,14 +448,14 @@ class Monsters(pygame.sprite.Sprite):
 
     def plus(self):
         s = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
-        s += 100
+        s += 10
         wr = open('data/result.txt', mode='w', encoding='utf-8')
         wr.write(str(s))
 
     def get(self):
         return self.rect.x, self.rect.y, self.direction
 
-    def update(self, obj):
+    def update(self, obj, house, bul):
         if pygame.sprite.collide_mask(self, house) and self.direction == 2:
             self.rect = self.rect.move(0, 2)
         if pygame.sprite.collide_mask(self, house) and self.direction == 0:
@@ -530,7 +532,6 @@ class Monsters(pygame.sprite.Sprite):
             self.index_animation = 1
 
     def kill(self):
-        global hh
         try:
             self.alive = False
             self.image = self.dead[int(self.a)]
@@ -551,22 +552,53 @@ def load_level(filename):
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
-if __name__ == '__main__':
-    pygame.init()
-    """ Создание меню """
-    punkts = [(120, 140, u'Play', (250, 250, 30), (250, 30, 250), 0),
+def finish_window(text):
+    ''' Окно '''
+    window = pygame.display.set_mode((400, 430))
+    pygame.display.set_caption("Hello, pygame!!!")
+    ''' Холст '''
+    screen = pygame.Surface((400, 400))
+    ''' Строка состояния '''
+    info_string = pygame.Surface((400, 30))
+    """ Создание финишного окна"""
+    punkts = [(90, 140, u'Return', (250, 250, 30), (250, 30, 250), 0),
+              (120, 210, u'Quit', (250, 250, 30), (250, 30, 250), 1)]
+    punkt = [(10, 90, f'Результат:', (250, 250, 30), (250, 30, 250), 0),
+             (40, 140, f'{int(text)-10} очков', (250, 250, 30), (250, 30, 250), 0),
+             (40, 190, 'ОК', (250, 250, 30), (250, 30, 250), 0)]
+    res = Menu(punkt)
+    game = Menu(punkts)
+    game.menu()
+    res.menu()
+
+
+def continue_window():
+    ''' Окно '''
+    window = pygame.display.set_mode((400, 430))
+    pygame.display.set_caption("Hello, pygame!!!")
+    ''' Холст '''
+    screen = pygame.Surface((400, 400))
+    ''' Строка состояния '''
+    info_string = pygame.Surface((400, 30))
+    """ Создание финишного окна"""
+    punkts = [(30, 140, u'Next Stage', (250, 250, 30), (250, 30, 250), 0),
               (120, 210, u'Quit', (250, 250, 30), (250, 30, 250), 1)]
     game = Menu(punkts)
-    # game.menu()
-    """ Подготовка к запуску игры """
-    size = width, height = 1000, 700
+    game.menu()
+
+
+def play_game():
+    health.add(health1)
+    health.add(health2)
+    health.add(health3)
+    size = 700, 700
     screen = pygame.display.set_mode(size)
     running = True
-    camera = Camera()
     screen.fill((93, 62, 29))
     pygame.display.flip()
     fps = 80
     fps_heal = 0
+    camera = Camera()
     clock = pygame.time.Clock()
     player, level_x, level_y, house = generate_level(load_level('map.txt'))
     tiles_group.draw(screen)
@@ -577,7 +609,7 @@ if __name__ == '__main__':
     space_group.add(a)
     space_group.draw(screen)
     stones.update()
-
+    bul = Bullet(player.get())
     while running:
         space_group.draw(screen)
         for event in pygame.event.get():
@@ -592,12 +624,9 @@ if __name__ == '__main__':
                         pygame.mixer.music.play()
         if len(mon.sprites()) == 0:
             zombies = random.randint(4, 10)
-            count_of_zom = zombies
             change(zombies)
-
         try:
             bul.x()
-
         except:
             pass
         try:
@@ -605,7 +634,7 @@ if __name__ == '__main__':
                 bul.kill()
         except:
             pass
-        mon.update(player)
+        mon.update(player, house, bul)
 
         if fps_heal != 0:
             fps_heal -= 1
@@ -613,9 +642,7 @@ if __name__ == '__main__':
             fps_heal = player.mon_heal()
         tiles_group.draw(screen)
         all_sprites.draw(screen)
-
         mon.draw(screen)
-
         group.draw(screen)
         bullet.draw(screen)
         stones.draw(screen)
@@ -634,10 +661,49 @@ if __name__ == '__main__':
             camera.apply(sprite)
         for sprite in stones:
             camera.apply(sprite)
+
         if fps_heal <= 160 and fps_heal >= 150:
             screen.fill('red')
         pygame.display.flip()
-        player.update()
+        player.update(house)
         clock.tick(fps)
+        res = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+        if player.finish():
+            running = False
+            s = int(open('data/itog.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+            res = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+            wr = open('data/result.txt', mode='w', encoding='utf-8')
+            wr.write(str(10))
+            wr = open('data/itog.txt', mode='w', encoding='utf-8')
+            wr.write(str(10))
+            if s == 10:
+                return 1, res
+        elif int(count_of_zom) + 1 == res // 10:
+            running = False
+            s = int(open('data/itog.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+            res = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
+            wr = open('data/result.txt', mode='w', encoding='utf-8')
+            wr.write(str(10))
+            wr = open('data/result.txt', mode='w', encoding='utf-8')
+            wr.write(str(s + res))
+            return 2, True
 
-    pygame.quit()
+
+if __name__ == '__main__':
+    pygame.init()
+    """ Создание меню """
+    punkts = [(120, 140, u'Play', (250, 250, 30), (250, 30, 250), 0),
+              (120, 210, u'Quit', (250, 250, 30), (250, 30, 250), 1)]
+    game = Menu(punkts)
+    game.menu()
+    while True:
+        """ Подготовка к запуску игры """
+        f = play_game()
+        if f[0] == 1:
+            """Финишное окно"""
+            finish_window(str(f[1]))
+            pygame.mixer.music.load("data/shoot.mp3")
+            pygame.mixer.music.play()
+        elif f[0] == 2:
+            """Окно продолжения"""
+            continue_window()
