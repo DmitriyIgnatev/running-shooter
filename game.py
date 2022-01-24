@@ -1,6 +1,5 @@
 import pygame
 import pygame.locals
-import time
 import os
 import sys
 import random
@@ -701,9 +700,9 @@ if __name__ == '__main__':
         f = play_game()
         if f[0] == 1:
             """Финишное окно"""
-            finish_window(str(f[1]))
-            pygame.mixer.music.load("data/shoot.mp3")
+            pygame.mixer.music.load("data/проигрыш.mp3")
             pygame.mixer.music.play()
+            finish_window(str(f[1]))
         elif f[0] == 2:
             """Окно продолжения"""
             continue_window()
