@@ -1,5 +1,6 @@
 import pygame
 import pygame.locals
+import time
 import os
 import sys
 import random
@@ -677,7 +678,7 @@ def play_game():
             wr.write(str(10))
             if s == 10:
                 return 1, res
-        elif int(count_of_zom) + 1 == res // 10:
+        elif count_of_zom == res // 10:
             running = False
             s = int(open('data/itog.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
             res = int(open('data/result.txt', mode='r', encoding='utf-8').readlines()[0].replace('\n', ''))
@@ -700,9 +701,9 @@ if __name__ == '__main__':
         f = play_game()
         if f[0] == 1:
             """Финишное окно"""
-            pygame.mixer.music.load("data/проигрыш.mp3")
-            pygame.mixer.music.play()
             finish_window(str(f[1]))
+            pygame.mixer.music.load("data/lose.mp3")
+            pygame.mixer.music.play()
         elif f[0] == 2:
             """Окно продолжения"""
             continue_window()
